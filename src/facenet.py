@@ -170,7 +170,7 @@ def _add_loss_summaries(total_loss):
     # 在每次训练之后调用此操作，更新移动平均值。
     loss_averages_op = loss_averages.apply(losses + [total_loss])
 
-    # Attach a scalar summmary to all individual losses and the total loss; do the
+    # Attach a scalar summary to all individual losses and the total loss; do the
     # same for the averaged version of the losses.
     for l in losses + [total_loss]:
         # Name each loss as '(raw)' and name the moving average version of the loss
@@ -280,6 +280,7 @@ def load_data(image_paths, do_random_crop, do_random_flip, image_size, do_prewhi
     return images
 
 
+# mini batch, refer to the paper 3.2
 def get_label_batch(label_data, batch_size, batch_index):
     nrof_examples = np.size(label_data, 0)
     j = batch_index * batch_size % nrof_examples
@@ -457,7 +458,7 @@ def get_model_filenames(model_dir):
 
 def distance(embeddings1, embeddings2, distance_metric=0):
     if distance_metric == 0:
-        # Euclidian distance
+        # Euclidean distance
         diff = np.subtract(embeddings1, embeddings2)
         dist = np.sum(np.square(diff), 1)
     elif distance_metric == 1:
@@ -571,7 +572,9 @@ def calculate_val_far(threshold, dist, actual_issame):
     false_accept = np.sum(np.logical_and(predict_issame, np.logical_not(actual_issame)))
     n_same = np.sum(actual_issame)
     n_diff = np.sum(np.logical_not(actual_issame))
+    # val 召回率, = TP / P
     val = float(true_accept) / float(n_same)
+    # far = FP / N
     far = float(false_accept) / float(n_diff)
     return val, far
 
