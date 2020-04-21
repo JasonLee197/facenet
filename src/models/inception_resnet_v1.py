@@ -19,30 +19,110 @@ As described in http://arxiv.org/abs/1602.07261.
     on Learning
   Christian Szegedy, Sergey Ioffe, Vincent Vanhoucke, Alex Alemi
 """
+
+'''
+Please check out the essay mentioned above for the architecture of this model.
+Figure 10 to Figure 15
+'''
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
+'''
+Size of the Output Tensor (Image) of a Conv Layer
+Let’s define
+O = Size (width) of output image.
+I = Size (width) of input image.
+K = Size (width) of kernels used in the Conv Layer.
+N = Number of kernels.
+S = Stride of the convolution operation.
+P = Padding.
+The size (O) of the output image is given by
+  O = (I - K + 2P) / S + 1
+The number of channels in the output image is equal to the number of kernels N.
+'''
 
+'''
+Size of Output Tensor (Image) of a MaxPool Layer
+Let’s define
+
+O = Size (width) of output image.
+I = Size (width) of input image.
+S = Stride of the convolution operation.
+P_s = Pool size.
+
+The size (O) of the output image is given by
+
+  O = (I - P_s) / S + 1
+'''
+
+'''
+overall architecture: 
+                    Input(299*299*3)
+                    Stem(output is 35*35*256)
+                    5*Inception-A(output is 35*35*256)
+                    Reduction-A(output is 17*17*896)
+                    10*Inception-B(output is 17*17*896)
+                    Reduction-B(output is 8*8*1792)
+                    5*Inception-C(output is 8*8*1792)
+                    Average Pooling(output is 1792)
+                    Dropout(keep 0.8, output is 1792)
+                    Softmax(output is 1000)
+'''
 # Inception-Resnet-A
 def block35(net, scale=1.0, activation_fn=tf.nn.relu, scope=None, reuse=None):
     """Builds the 35x35 resnet block."""
     with tf.variable_scope(scope, 'Block35', [net], reuse=reuse):
         with tf.variable_scope('Branch_0'):
+            '''
+            def convolution(inputs,
+                            num_outputs,
+                            kernel_size,
+                            stride=1,
+                            padding='SAME',
+                            data_format=None,
+                            rate=1,
+                            activation_fn=nn.relu,
+                            normalizer_fn=None,
+                            normalizer_params=None,
+                            weights_initializer=initializers.xavier_initializer(),
+                            weights_regularizer=None,
+                            biases_initializer=init_ops.zeros_initializer(),
+                            biases_regularizer=None,
+                            reuse=None,
+                            variables_collections=None,
+                            outputs_collections=None,
+                            trainable=True,
+                            scope=None,
+                            conv_dims=None)
+            '''
+            # 32 1*1 convolution layers
             tower_conv = slim.conv2d(net, 32, 1, scope='Conv2d_1x1')
         with tf.variable_scope('Branch_1'):
+            # 1*1 -> 3*3
+            # 32 1*1 convolution layers
             tower_conv1_0 = slim.conv2d(net, 32, 1, scope='Conv2d_0a_1x1')
+            # 32 3*3 convolution layers
             tower_conv1_1 = slim.conv2d(tower_conv1_0, 32, 3, scope='Conv2d_0b_3x3')
         with tf.variable_scope('Branch_2'):
+            # 1*1 -> 3*3 -> 3*3
+            # 32 1*1 convolution layers
             tower_conv2_0 = slim.conv2d(net, 32, 1, scope='Conv2d_0a_1x1')
+            # 32 3*3 convolution layers
             tower_conv2_1 = slim.conv2d(tower_conv2_0, 32, 3, scope='Conv2d_0b_3x3')
+            # 32 3*3 convolution layers
             tower_conv2_2 = slim.conv2d(tower_conv2_1, 32, 3, scope='Conv2d_0c_3x3')
+        # Concatenates tensors along one dimension.
         mixed = tf.concat([tower_conv, tower_conv1_1, tower_conv2_2], 3)
+        # 256 1*1 convolution layers
         up = slim.conv2d(mixed, net.get_shape()[3], 1, normalizer_fn=None,
                          activation_fn=None, scope='Conv2d_1x1')
+        # add results with input
         net += scale * up
+        # go through relu activation
         if activation_fn:
             net = activation_fn(net)
     return net
@@ -52,6 +132,7 @@ def block17(net, scale=1.0, activation_fn=tf.nn.relu, scope=None, reuse=None):
     """Builds the 17x17 resnet block."""
     with tf.variable_scope(scope, 'Block17', [net], reuse=reuse):
         with tf.variable_scope('Branch_0'):
+            #
             tower_conv = slim.conv2d(net, 128, 1, scope='Conv2d_1x1')
         with tf.variable_scope('Branch_1'):
             tower_conv1_0 = slim.conv2d(net, 128, 1, scope='Conv2d_0a_1x1')

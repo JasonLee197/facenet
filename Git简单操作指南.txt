@@ -1,0 +1,19 @@
+【】代表自定义内容，如具体的分支名
+
+克隆远程库至本地：
+git clone https://github.com/JasonLee197/facenet.git
+
+新建分支：
+git checkout -b 【yourBranch】 master
+
+开发并提交至自己分支：
+git status    //查看当前repo状态及提交信息
+git add 【yourFile】    //提交修改的文件至缓存区
+git commit -m "your explaination"    //提交，并打上注释
+
+
+合并分支：
+git pull --rebase origin master    //拉取master分支中可能被其他成员修改的内容
+git checkout master    //转移至主分支
+git merge 【yourBranch】    //合并分支
+git push    //将合并后的主分支推送到远程仓库

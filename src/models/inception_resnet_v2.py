@@ -19,6 +19,12 @@ As described in http://arxiv.org/abs/1602.07261.
     on Learning
   Christian Szegedy, Sergey Ioffe, Vincent Vanhoucke, Alex Alemi
 """
+
+'''
+Please check out the essay mentioned above for the architecture of this model.
+Figure 3 and Figure 16 to Figure 20
+'''
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
