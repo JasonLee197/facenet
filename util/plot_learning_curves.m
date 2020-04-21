@@ -1,3 +1,6 @@
+clc
+clear
+close all
 % Plots the lerning curves for the specified training runs from data in the
 % file "lfw_result.txt" stored in the log directory for the respective
 % model.
@@ -25,16 +28,16 @@
 % SOFTWARE.
 
 %%
-addpath('/home/david/git/facenet/util/');
-log_dirs = { '/home/david/logs/facenet' };
+addpath('C:/Users/wesley/Google drive/Sync/19 spring/CSE 691/project/facenet/util/'); %不知道干啥的
+log_dirs = { 'C:/Users/wesley/Google drive/Sync/19 spring/CSE 691/project/facenet/output/log/facenet' }; % log 地址， 不能含有中文， 看 py里面设置
 %%
 res = { ...
-{ '20180402-114759', 'vggface2, wd=5e-4, center crop, fixed image standardization' }, ...
+{ '20180402-114759', 'vggface2, wd=5e-4, center crop, fixed image standardization' }, ... %% 没用，放这就行
 };
 
 %%
 res = { ...
-{ '20180408-102900', 'casia, wd=5e-4, pnlf=5e-4, fixed image standardization' }, ...
+{ '20200421-105928', 'casia, wd=5e-4, pnlf=5e-4, fixed image standardization' }, ... % '20200421-105928'是文件夹名称
 };
 
 %%
@@ -61,30 +64,41 @@ for i=1:length(res),
     var{i} = readlogs(filename,{'loss', 'reg_loss', 'xent_loss', 'lfw_accuracy', ...
         'lfw_valrate', 'val_loss', 'val_xent_loss', 'val_accuracy', ...
         'accuracy', 'prelogits_norm', 'learning_rate', 'center_loss', ...
-        'prelogits_hist', 'accuracy'});
+        'prelogits_hist', 'accuracy'}); %
     var{i}.steps = 1:length(var{i}.loss);
-    epoch = find(var{i}.lfw_accuracy,1,'last');
+    epoch = find(var{i}.lfw_accuracy,1,'last'); %最后一个非0值
     var{i}.epochs = 1:epoch;
     legends{i} = sprintf('%s: %s', res{i}{1}, res{i}{2});
     start_epoch = max(1,epoch-10);
     legends_accuracy{i} = sprintf('%s: %s (%.2f%%)', res{i}{1}, res{i}{2}, mean(var{i}.lfw_accuracy(start_epoch:epoch))*100 );
     legends_valrate{i} = sprintf('%s: %s (%.2f%%)', res{i}{1}, res{i}{2}, mean(var{i}.lfw_valrate(start_epoch:epoch))*100 );
-    
-    arguments_filename = fullfile(ld, res{i}{1}, 'arguments.txt');
+  
+    arguments_filename = fullfile(ld, res{i}{1}, 'arguments.txt');  
+    ff=fopen(arguments_filename);
+    tline=fgetl(ff);
+    ind=1;
     if exist(arguments_filename)
-        str = fileread(arguments_filename);
-        var{i}.wd = getParameter(str, 'weight_decay', '0.0');
-        var{i}.cl = getParameter(str, 'center_loss_factor', '0.0');
-        var{i}.fixed_std = getParameter(str, 'use_fixed_image_standardization', '0');
-        var{i}.data_dir = getParameter(str, 'data_dir', '');
-        var{i}.lr = getParameter(str, 'learning_rate', '0.1');
-        var{i}.epoch_size = str2double(getParameter(str, 'epoch_size', '1000'));
-        var{i}.batch_size = str2double(getParameter(str, 'batch_size', '90'));
+        while ischar(tline)
+            str{ind}=tline;
+        	tline=fgetl(ff);
+            ind=ind+1;
+        end
+        
+        str=string(str');
+        
+        
+        var{i}.wd = getpp(str, 'weight_decay', '0.0');
+        var{i}.cl = getpp(str, 'center_loss_factor', '0.0');
+        var{i}.fixed_std = getpp(str, 'use_fixed_image_standardization', '0');
+        var{i}.data_dir = getpp(str, 'data_dir', '');
+        var{i}.lr = getpp(str, 'learning_rate', '0.1');
+        var{i}.epoch_size = str2double(getpp(str, 'epoch_size', '1000'));
+        var{i}.batch_size = str2double(getpp(str, 'batch_size', '90'));
         var{i}.examples_per_epoch = var{i}.epoch_size*var{i}.batch_size;
-        var{i}.mnipc = getParameter(str, 'filter_min_nrof_images_per_class', '-1');
-        var{i}.val_step = str2num(getParameter(str, 'validate_every_n_epochs', '10'));
-        var{i}.pnlf = getParameter(str, 'prelogits_norm_loss_factor', '-1');
-        var{i}.emb_size = getParameter(str, 'embedding_size', '-1');
+        var{i}.mnipc = getpp(str, 'filter_min_nrof_images_per_class', '-1');
+        var{i}.val_step = str2num(getpp(str, 'validate_every_n_epochs', '10'));
+        var{i}.pnlf = getpp(str, 'prelogits_norm_loss_factor', '-1');
+        var{i}.emb_size = getpp(str, 'embedding_size', '-1');
 
         fprintf('%s: wd=%s lr=%s, pnlf=%s, data_dir=%s, emb_size=%s\n', ...
             res{i}{1}, var{i}.wd, var{i}.lr, var{i}.pnlf, var{i}.data_dir, var{i}.emb_size);
@@ -93,7 +107,7 @@ end;
 
 timestr = datestr(now,'yyyymmdd_HHMMSS');
 
-h = 1; figure(h); close(h); figure(h); hold on; setsize(1.5);
+h = 1; figure(h); close(h); figure(h); hold on; %%setsize(1.5);
 title('LFW accuracy');
 xlabel('Steps');
 ylabel('Accuracy');
@@ -110,10 +124,10 @@ accuracy_file_name = sprintf('lfw_accuracy_%s',timestr);
 %print(accuracy_file_name,'-dpng')
 
 
-if 0
+if 1 %0为不plot，1为plot
     %%
-    %h = 2; figure(h); close(h); figure(h); hold on; setsize(1.5);
-    h = 1; figure(h); hold on;
+    h = 2; figure(h); close(h); figure(h); hold on; %setsize(1.5);
+    %h = 1; figure(h); hold on;
     title('LFW validation rate');
     xlabel('Step');
     ylabel('VAL @ FAR = 10^{-3}');
@@ -129,9 +143,9 @@ if 0
 %    print(valrate_file_name,'-dpng')
 end
 
-if 0
+if 1
     %% Plot cross-entropy loss
-    h = 3; figure(h); close(h); figure(h); hold on; setsize(1.5);
+    h = 3; figure(h); close(h); figure(h); hold on; %setsize(1.5);
     title('Training/validation set cross-entropy loss');
     xlabel('Step');
     title('Training/validation set cross-entropy loss');
@@ -157,7 +171,7 @@ if 0
     %print(xent_file_name,'-dpng')
 end
 
-if 0
+if 1
     %% Plot accuracy on training set
     h = 32; figure(h); clf; hold on; 
     title('Training/validation set accuracy');
@@ -185,7 +199,7 @@ if 0
     %print(acc_file_name,'-dpng')
 end
 
-if 0
+if 1
     %% Plot prelogits CDF
     h = 35; figure(h); clf; hold on; 
     title('Prelogits histogram');
@@ -203,7 +217,7 @@ if 0
     hold off
 end
 
-if 0
+if 1
     %% Plot prelogits norm
     h = 32; figure(h); clf; hold on; 
     title('Prelogits norm');
@@ -218,7 +232,7 @@ if 0
     hold off
 end
 
-if 0
+if 1
     %% Plot learning rate
     h = 42; figure(h); clf; hold on; 
     title('Learning rate');
@@ -233,9 +247,9 @@ if 0
     hold off
 end
 
-if 0
+if 1
     %% Plot center loss
-    h = 9; figure(h); close(h); figure(h); hold on; setsize(1.5);
+    h = 9; figure(h); close(h); figure(h); hold on; %setsize(1.5);
     title('Center loss');
     xlabel('Epochs');
     ylabel('Center loss');
@@ -251,9 +265,9 @@ if 0
     legend(legends, 'Location', 'NorthEast','FontSize',fontSize);
 end
 
-if 0
+if 1
     %% Plot center loss with factor
-    h = 9; figure(h); close(h); figure(h); hold on; setsize(1.5);
+    h = 9; figure(h); close(h); figure(h); hold on; %setsize(1.5);
     title('Center loss with factor');
     xlabel('Epochs');
     ylabel('Center loss * center loss factor');
@@ -269,9 +283,9 @@ if 0
     legend(legends, 'Location', 'NorthEast','FontSize',fontSize);
 end
 
-if 0
+if 1
     %% Plot total loss
-    h = 4; figure(h); close(h); figure(h); hold on; setsize(1.5);
+    h = 4; figure(h); close(h); figure(h); hold on; %setsize(1.5);
     title('Total loss');
     xlabel('Epochs');
     ylabel('Total loss');
@@ -284,9 +298,9 @@ if 0
     legend(legends, 'Location', 'NorthEast','FontSize',fontSize);
 end
 
-if 0
+if 1
     %% Plot regularization loss
-    h = 5; figure(h); close(h); figure(h); hold on; setsize(1.5);
+    h = 5; figure(h); close(h); figure(h); hold on; %setsize(1.5);
     title('Regularization loss');
     xlabel('Epochs');
     ylabel('Regularization loss');
