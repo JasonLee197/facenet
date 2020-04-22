@@ -1,0 +1,44 @@
+moving_average_decay: 0.9999
+gpu_memory_fraction: 0.7
+learning_rate_schedule_file: data/learning_rate_schedule.txt
+learning_rate_decay_epochs: 100
+center_loss_alfa: 0.95
+image_size: 160
+random_flip: False
+model_def: models.inception_resnet_v1
+weight_decay: 0.0
+center_loss_factor: 0.0
+lfw_nrof_folds: 10
+filter_min_nrof_images_per_class: 0
+filter_percentile: 100.0
+prelogits_norm_loss_factor: 0.0
+optimizer: ADAGRAD
+pretrained_model: None
+lfw_use_flipped_images: False
+random_rotate: False
+data_dir: G:/train/train
+min_nrof_val_images_per_class: 0
+validation_set_split_ratio: 0.0
+seed: 666
+random_crop: False
+lfw_batch_size: 100
+log_histograms: False
+use_fixed_image_standardization: False
+models_base_dir: C:/Users/wesley/Google drive/Sync/19 spring/CSE 691/project/facenet/output/models/facenet
+batch_size: 90
+prelogits_norm_p: 1.0
+nrof_preprocess_threads: 4
+lfw_subtract_mean: False
+embedding_size: 128
+lfw_dir: 
+learning_rate: 0.1
+keep_probability: 1.0
+prelogits_hist_max: 10.0
+lfw_pairs: data/pairs.txt
+filter_filename: 
+logs_base_dir: C:/Users/wesley/Google drive/Sync/19 spring/CSE 691/project/facenet/output/log/facenet
+learning_rate_decay_factor: 1.0
+epoch_size: 1000
+max_nrof_epochs: 2
+validate_every_n_epochs: 5
+lfw_distance_metric: 0

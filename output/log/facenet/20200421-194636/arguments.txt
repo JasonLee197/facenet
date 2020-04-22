@@ -1,0 +1,44 @@
+filter_min_nrof_images_per_class: 0
+learning_rate: 0.1
+epoch_size: 1000
+random_flip: False
+models_base_dir: C:/Users/wesley/Google drive/Sync/19 spring/CSE 691/project/facenet/output/models/facenet
+lfw_subtract_mean: False
+use_fixed_image_standardization: False
+log_histograms: False
+embedding_size: 128
+batch_size: 90
+nrof_preprocess_threads: 4
+model_def: models.inception_resnet_v1
+prelogits_hist_max: 10.0
+keep_probability: 1.0
+moving_average_decay: 0.9999
+validation_set_split_ratio: 0.0
+random_rotate: False
+prelogits_norm_loss_factor: 0.0
+center_loss_alfa: 0.95
+validate_every_n_epochs: 5
+prelogits_norm_p: 1.0
+random_crop: False
+gpu_memory_fraction: 0.85
+max_nrof_epochs: 20
+learning_rate_decay_epochs: 100
+lfw_dir: 
+filter_filename: 
+weight_decay: 0.0
+lfw_pairs: data/pairs.txt
+seed: 666
+lfw_use_flipped_images: False
+logs_base_dir: C:/Users/wesley/Google drive/Sync/19 spring/CSE 691/project/facenet/output/log/facenet
+center_loss_factor: 0.0
+lfw_batch_size: 100
+data_dir: ~/datasets/casia/casia_maxpy_mtcnnalign_182_160
+image_size: 160
+lfw_nrof_folds: 10
+lfw_distance_metric: 0
+min_nrof_val_images_per_class: 0
+optimizer: ADAGRAD
+learning_rate_schedule_file: data/learning_rate_schedule.txt
+filter_percentile: 100.0
+learning_rate_decay_factor: 1.0
+pretrained_model: None

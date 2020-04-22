@@ -20,10 +20,7 @@ As described in http://arxiv.org/abs/1602.07261.
   Christian Szegedy, Sergey Ioffe, Vincent Vanhoucke, Alex Alemi
 """
 
-'''
-Please check out the essay mentioned above for the architecture of this model.
-Figure 10 to Figure 15
-'''
+
 
 from __future__ import absolute_import
 from __future__ import division

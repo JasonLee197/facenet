@@ -37,7 +37,7 @@ res = { ...
 
 %%
 res = { ...
-{ '20200421-105928', 'casia, wd=5e-4, pnlf=5e-4, fixed image standardization' }, ... % '20200421-105928'是文件夹名称
+{ '20200421-195732', 'casia, wd=5e-4, pnlf=5e-4, fixed image standardization' }, ... % '20200421-105928'是文件夹名称
 };
 
 %%
@@ -106,26 +106,27 @@ for i=1:length(res),
 end;
 
 timestr = datestr(now,'yyyymmdd_HHMMSS');
-
-h = 1; figure(h); close(h); figure(h); hold on; %%setsize(1.5);
-title('LFW accuracy');
-xlabel('Steps');
-ylabel('Accuracy');
-grid on;
-N = 1; flt = ones(1,N)/N;
-for i=1:length(var),
-    plot(var{i}.epochs*1000, filter(flt, 1, var{i}.lfw_accuracy(var{i}.epochs)), lineStyles2{i}, 'LineWidth', lineWidth);
-end;
-legend(legends_accuracy,'Location','SouthEast','FontSize',fontSize);
-v=axis;
-v(3:4) = [ 0.95 1.0 ];
-axis(v);
-accuracy_file_name = sprintf('lfw_accuracy_%s',timestr);
-%print(accuracy_file_name,'-dpng')
-
-
+%%
+if 0
+    h = 1; figure(h); close(h); figure(h); hold on; %%setsize(1.5);
+    title('LFW accuracy');
+    xlabel('Steps');
+    ylabel('Accuracy');
+    grid on;
+    N = 1; flt = ones(1,N)/N;
+    for i=1:length(var),
+        plot(var{i}.epochs*1000, filter(flt, 1, var{i}.lfw_accuracy(var{i}.epochs)), lineStyles2{i}, 'LineWidth', lineWidth);
+    end;
+    legend(legends_accuracy,'Location','SouthEast','FontSize',fontSize);
+    v=axis;
+    v(3:4) = [ 0.95 1.0 ];
+    axis(v);
+    accuracy_file_name = sprintf('lfw_accuracy_%s',timestr);
+    %print(accuracy_file_name,'-dpng')
+end
+%%
 if 1 %0为不plot，1为plot
-    %%
+
     h = 2; figure(h); close(h); figure(h); hold on; %setsize(1.5);
     %h = 1; figure(h); hold on;
     title('LFW validation rate');
@@ -142,9 +143,9 @@ if 1 %0为不plot，1为plot
     valrate_file_name = sprintf('lfw_valrate_%s',timestr);
 %    print(valrate_file_name,'-dpng')
 end
-
-if 1
     %% Plot cross-entropy loss
+if 1
+
     h = 3; figure(h); close(h); figure(h); hold on; %setsize(1.5);
     title('Training/validation set cross-entropy loss');
     xlabel('Step');
@@ -170,9 +171,9 @@ if 1
     xent_file_name = sprintf('xent_%s',timestr);
     %print(xent_file_name,'-dpng')
 end
-
-if 1
     %% Plot accuracy on training set
+if 1
+
     h = 32; figure(h); clf; hold on; 
     title('Training/validation set accuracy');
     xlabel('Step');
@@ -198,9 +199,9 @@ if 1
     acc_file_name = sprintf('accuracy_%s',timestr);
     %print(acc_file_name,'-dpng')
 end
-
-if 1
     %% Plot prelogits CDF
+if 0
+
     h = 35; figure(h); clf; hold on; 
     title('Prelogits histogram');
     xlabel('Epoch');
@@ -216,9 +217,9 @@ if 1
     legend(legends, 'Location', 'SouthEast','FontSize',fontSize);
     hold off
 end
-
-if 1
     %% Plot prelogits norm
+if 1
+
     h = 32; figure(h); clf; hold on; 
     title('Prelogits norm');
     xlabel('Step');
@@ -231,9 +232,9 @@ if 1
     legend(legends, 'Location', 'NorthEast','FontSize',fontSize);
     hold off
 end
-
-if 1
     %% Plot learning rate
+if 1
+
     h = 42; figure(h); clf; hold on; 
     title('Learning rate');
     xlabel('Step');
@@ -246,9 +247,9 @@ if 1
     legend(legends, 'Location', 'NorthEast','FontSize',fontSize);
     hold off
 end
-
-if 1
     %% Plot center loss
+if 1
+
     h = 9; figure(h); close(h); figure(h); hold on; %setsize(1.5);
     title('Center loss');
     xlabel('Epochs');
@@ -264,9 +265,9 @@ if 1
     end;
     legend(legends, 'Location', 'NorthEast','FontSize',fontSize);
 end
-
-if 1
     %% Plot center loss with factor
+if 1
+
     h = 9; figure(h); close(h); figure(h); hold on; %setsize(1.5);
     title('Center loss with factor');
     xlabel('Epochs');
@@ -282,9 +283,9 @@ if 1
     end;
     legend(legends, 'Location', 'NorthEast','FontSize',fontSize);
 end
-
-if 1
     %% Plot total loss
+if 1
+
     h = 4; figure(h); close(h); figure(h); hold on; %setsize(1.5);
     title('Total loss');
     xlabel('Epochs');
@@ -297,9 +298,9 @@ if 1
     end;
     legend(legends, 'Location', 'NorthEast','FontSize',fontSize);
 end
-
-if 1
     %% Plot regularization loss
+if 1
+
     h = 5; figure(h); close(h); figure(h); hold on; %setsize(1.5);
     title('Regularization loss');
     xlabel('Epochs');
