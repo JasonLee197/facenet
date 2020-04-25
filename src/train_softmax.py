@@ -1,19 +1,19 @@
 """Training a face recognizer with TensorFlow using softmax cross entropy loss
 """
 # MIT License
-# 
+#
 # Copyright (c) 2016 David Sandberg
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,17 +26,23 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import tensorflow.compat.v1 as tf
 from datetime import datetime
 import os.path
 import time
 import sys
 import random
-import tensorflow as tf
 import numpy as np
 import importlib
 import argparse
 import facenet
 import lfw
+
+"""
+h5py文件是存放两类对象的容器，数据集(dataset)和组(group)，dataset类似数组类的数据集合，和numpy的数组差不多.
+group是像文件夹一样的容器，它好比python中的字典，有键(key)和值(value)。group中可以存放dataset或者其他的group.
+”键”就是组成员的名称，”值”就是组成员对象本身(组或者数据集)，下面来看下如何创建组和数据集
+"""
 import h5py
 import math
 import tensorflow.contrib.slim as slim
@@ -46,34 +52,37 @@ from tensorflow.python.ops import array_ops
 
 
 def main(args):
-    network = importlib.import_module(args.model_def)
-    image_size = (args.image_size, args.image_size)
+    # args从文件系统中导入对象
+    network = importlib.import_module(args.model_def)  # 导入模型，default = 'models.inception_resnet_v1'
+    image_size = (args.image_size, args.image_size)  # 导入尺寸，default = 160
 
     subdir = datetime.strftime(datetime.now(), '%Y%m%d-%H%M%S')
-    log_dir = os.path.join(os.path.expanduser(args.logs_base_dir), subdir)
+    log_dir = os.path.join(os.path.expanduser(args.logs_base_dir), subdir)  # 导入运行日志目录，default = '~/logs/facenet'
     if not os.path.isdir(log_dir):  # Create the log directory if it doesn't exist
         os.makedirs(log_dir)
-    model_dir = os.path.join(os.path.expanduser(args.models_base_dir), subdir)
+    model_dir = os.path.join(os.path.expanduser(args.models_base_dir), subdir)  # ，导入模型目录，default = '~/models/facenet'
     if not os.path.isdir(model_dir):  # Create the model directory if it doesn't exist
         os.makedirs(model_dir)
 
-    stat_file_name = os.path.join(log_dir, 'stat.h5')
+    stat_file_name = os.path.join(log_dir, 'stat.h5')  # 统计数据，用h5格式保存
 
     # Write arguments to a text file
-    facenet.write_arguments_to_file(args, os.path.join(log_dir, 'arguments.txt'))
+    facenet.write_arguments_to_file(args, os.path.join(log_dir, 'arguments.txt'))  # 记录命令至运行日志
 
     # Store some git revision info in a text file in the log directory
-    src_path, _ = os.path.split(os.path.realpath(__file__))
+    src_path, _ = os.path.split(os.path.realpath(__file__))  # os.path.realpath(__file__)是脚本所在的绝对路径
     facenet.store_revision_info(src_path, log_dir, ' '.join(sys.argv))
 
-    np.random.seed(seed=args.seed)
+    np.random.seed(seed=args.seed)  # default = 666
     random.seed(args.seed)
-    dataset = facenet.get_dataset(args.data_dir)
-    if args.filter_filename:
+    dataset = facenet.get_dataset(args.data_dir)  # 导入数据集目录，default = '~/datasets/casia/casia_maxpy_mtcnnalign_182_160'
+    if args.filter_filename:  # default = ''
         dataset = filter_dataset(dataset, os.path.expanduser(args.filter_filename),
-                                 args.filter_percentile, args.filter_min_nrof_images_per_class)
+                                 # expanduser把path中包含的"~"和"~user"转换成用户目录.
+                                 args.filter_percentile,
+                                 args.filter_min_nrof_images_per_class)  # default = 100.0, default = 0
 
-    if args.validation_set_split_ratio > 0.0:
+    if args.validation_set_split_ratio > 0.0:  # default = 0.0
         train_set, val_set = facenet.split_dataset(dataset, args.validation_set_split_ratio,
                                                    args.min_nrof_val_images_per_class, 'SPLIT_IMAGES')
     else:
@@ -91,12 +100,12 @@ def main(args):
     if args.lfw_dir:
         print('LFW directory: %s' % args.lfw_dir)
         # Read the file containing the pairs used for testing
-        pairs = lfw.read_pairs(os.path.expanduser(args.lfw_pairs))
+        pairs = lfw.read_pairs(os.path.expanduser(args.lfw_pairs))  # default = 'data/pairs.txt'
         # Get the paths for the corresponding images
         lfw_paths, actual_issame = lfw.get_paths(os.path.expanduser(args.lfw_dir), pairs)
 
     with tf.Graph().as_default():
-        tf.set_random_seed(args.seed)
+        tf.set_random_seed(args.seed)  # 图级随机数种子
         global_step = tf.Variable(0, trainable=False)
 
         # Get a list of image paths and their labels
@@ -105,14 +114,15 @@ def main(args):
 
         val_image_list, val_label_list = facenet.get_image_paths_and_labels(val_set)
 
-        # Create a queue that produces indices into the image_list and label_list 
+        # Create a queue that produces indices into the image_list and label_list
         labels = ops.convert_to_tensor(label_list, dtype=tf.int32)
         range_size = array_ops.shape(labels)[0]
-        index_queue = tf.train.range_input_producer(range_size, num_epochs=None,
-                                                    shuffle=True, seed=None, capacity=32)
+        index_queue = tf.train.range_input_producer(range_size, num_epochs=None,  # 产生1到range_size的对列，num_epochs不给值的话
+                                                    shuffle=True, seed=None, capacity=32)  # 则默认无限循环，后面用capacity限制容量
 
-        index_dequeue_op = index_queue.dequeue_many(args.batch_size * args.epoch_size, 'index_dequeue')
+        index_dequeue_op = index_queue.dequeue_many(args.batch_size * args.epoch_size, 'index_dequeue')  # 使多个元素同时出列并命名
 
+        # 创建张量
         learning_rate_placeholder = tf.placeholder(tf.float32, name='learning_rate')
         batch_size_placeholder = tf.placeholder(tf.int32, name='batch_size')
         phase_train_placeholder = tf.placeholder(tf.bool, name='phase_train')
@@ -121,6 +131,8 @@ def main(args):
         control_placeholder = tf.placeholder(tf.int32, shape=(None, 1), name='control')
 
         nrof_preprocess_threads = 4
+
+        # 先进先出对列
         input_queue = data_flow_ops.FIFOQueue(capacity=2000000,
                                               dtypes=[tf.string, tf.int32, tf.int32],
                                               shapes=[(1,), (1,), (1,)],
@@ -146,26 +158,30 @@ def main(args):
         prelogits, _ = network.inference(image_batch, args.keep_probability,
                                          phase_train=phase_train_placeholder, bottleneck_layer_size=args.embedding_size,
                                          weight_decay=args.weight_decay)
-        logits = slim.fully_connected(prelogits, len(train_set), activation_fn=None,
+        logits = slim.fully_connected(prelogits, len(train_set), activation_fn=None,  # 相当于Dense
                                       weights_initializer=slim.initializers.xavier_initializer(),
                                       weights_regularizer=slim.l2_regularizer(args.weight_decay),
                                       scope='Logits', reuse=False)
 
-        embeddings = tf.nn.l2_normalize(prelogits, 1, 1e-10, name='embeddings')
+        embeddings = tf.nn.l2_normalize(prelogits, 1, 1e-10, name='embeddings')  # 按行进行L2正则化，同除各行L2范数
 
         # Norm for the prelogits
         eps = 1e-4
+        # 按行计算平均值。norm计算范数，abs取绝对值，ord取1，使用第一范数
         prelogits_norm = tf.reduce_mean(tf.norm(tf.abs(prelogits) + eps, ord=args.prelogits_norm_p, axis=1))
-        tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, prelogits_norm * args.prelogits_norm_loss_factor)
+        tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES,
+                             prelogits_norm * args.prelogits_norm_loss_factor)  # 将该种正则化方式储存至graphkeys
 
         # Add center loss
         prelogits_center_loss, _ = facenet.center_loss(prelogits, label_batch, args.center_loss_alfa, nrof_classes)
         tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, prelogits_center_loss * args.center_loss_factor)
 
+        # 指数衰减。参数1：原始学习率。参数2：全局步数，每次自增1，如果不写则不增1.参数3：衰减系数。参数4：衰减速度。参数5：是否取整。True时取整
+        # 具体计算：decayed_learning_rate = learning_rate*decay_rate^(global_step/decay_steps)
         learning_rate = tf.train.exponential_decay(learning_rate_placeholder, global_step,
                                                    args.learning_rate_decay_epochs * args.epoch_size,
                                                    args.learning_rate_decay_factor, staircase=True)
-        tf.summary.scalar('learning_rate', learning_rate)
+        tf.summary.scalar('learning_rate', learning_rate)  # 保存数据
 
         # Calculate the average cross entropy loss across the batch
         cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -173,11 +189,12 @@ def main(args):
         cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
         tf.add_to_collection('losses', cross_entropy_mean)
 
+        # cast转换数据类型(布尔->浮点数)，equal比较两个向量相同位置的元素是否一样
         correct_prediction = tf.cast(tf.equal(tf.argmax(logits, 1), tf.cast(label_batch, tf.int64)), tf.float32)
-        accuracy = tf.reduce_mean(correct_prediction)
+        accuracy = tf.reduce_mean(correct_prediction)  # 求平均值即准确率
 
         # Calculate the total losses
-        regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+        regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)  # 从graphkeys中把之前存储的loss计算方式取出来
         total_loss = tf.add_n([cross_entropy_mean] + regularization_losses, name='total_loss')
 
         # Build a Graph that trains the model with one batch of examples and updates the model parameters
@@ -188,15 +205,19 @@ def main(args):
         saver = tf.train.Saver(tf.trainable_variables(), max_to_keep=3)
 
         # Build the summary operation based on the TF collection of Summaries.
-        summary_op = tf.summary.merge_all()
+        summary_op = tf.summary.merge_all()  # 将所有summary全部保存到磁盘，以便tensorboard显示
 
         # Start running operations on the Graph.
-        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=args.gpu_memory_fraction)
-        sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=False))
-        sess.run(tf.global_variables_initializer())
-        sess.run(tf.local_variables_initializer())
-        summary_writer = tf.summary.FileWriter(log_dir, sess.graph)
-        coord = tf.train.Coordinator()
+        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=args.gpu_memory_fraction)  # 使用gpu，参数为使用的显存上限
+        sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=False))  # 会话
+        sess.run(tf.global_variables_initializer())  # 返回所有全局变量
+        sess.run(tf.local_variables_initializer())  # 返回所有局部变量
+        summary_writer = tf.summary.FileWriter(log_dir, sess.graph)  # 将训练过程数据保存在filewriter指定的文件中
+        coord = tf.train.Coordinator()  # 管理在Session中的多个线程
+        """
+        启动入队线程，由多个或单个线程，按照设定规则，把文件读入Filename Queue中。函数返回线程ID的列表，一般情况下，系统有多少个核，
+        就会启动多少个入队线程（入队具体使用多少个线程在tf.train.batch中定义）
+        """
         tf.train.start_queue_runners(coord=coord, sess=sess)
 
         with sess.as_default():
@@ -210,6 +231,7 @@ def main(args):
             nrof_steps = args.max_nrof_epochs * args.epoch_size
             nrof_val_samples = int(math.ceil(
                 args.max_nrof_epochs / args.validate_every_n_epochs))  # Validate every validate_every_n_epochs as well as in the last epoch
+            # ceil返回上入整数
             stat = {
                 'loss': np.zeros((nrof_steps,), np.float32),
                 'center_loss': np.zeros((nrof_steps,), np.float32),
@@ -279,34 +301,34 @@ def main(args):
 
 
 def find_threshold(var, percentile):
-    hist, bin_edges = np.histogram(var, 100)
-    cdf = np.float32(np.cumsum(hist)) / np.sum(hist)
-    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    hist, bin_edges = np.histogram(var, 100)  # 直方图分箱
+    cdf = np.float32(np.cumsum(hist)) / np.sum(hist)  # 累加结果 / 总和
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2  # 找分箱中心
     # plt.plot(bin_centers, cdf)
-    threshold = np.interp(percentile * 0.01, cdf, bin_centers)
+    threshold = np.interp(percentile * 0.01, cdf, bin_centers)  # 一维线性插值
     return threshold
 
 
 def filter_dataset(dataset, data_filename, percentile, min_nrof_images_per_class):
-    with h5py.File(data_filename, 'r') as f:
+    with h5py.File(data_filename, 'r') as f:  # 读取hdf5文件
         distance_to_center = np.array(f.get('distance_to_center'))
         label_list = np.array(f.get('label_list'))
         image_list = np.array(f.get('image_list'))
         distance_to_center_threshold = find_threshold(distance_to_center, percentile)
-        indices = np.where(distance_to_center >= distance_to_center_threshold)[0]
+        indices = np.where(distance_to_center >= distance_to_center_threshold)[0]  # 找出距离大于阈值的点的第一维坐标
         filtered_dataset = dataset
         removelist = []
         for i in indices:
             label = label_list[i]
             image = image_list[i]
-            if image in filtered_dataset[label].image_paths:
+            if image in filtered_dataset[label].image_paths:  # 找出对应路径
                 filtered_dataset[label].image_paths.remove(image)
             if len(filtered_dataset[label].image_paths) < min_nrof_images_per_class:
                 removelist.append(label)
 
         ix = sorted(list(set(removelist)), reverse=True)
         for i in ix:
-            del (filtered_dataset[i])
+            del (filtered_dataset[i])  # 删除
 
     return filtered_dataset
 
@@ -335,7 +357,8 @@ def train(args, sess, epoch, image_list, label_list, index_dequeue_op, enqueue_o
     # Enqueue one epoch of image paths and labels
     labels_array = np.expand_dims(np.array(label_epoch), 1)
     image_paths_array = np.expand_dims(np.array(image_epoch), 1)
-    control_value = facenet.RANDOM_ROTATE * random_rotate + facenet.RANDOM_CROP * random_crop + facenet.RANDOM_FLIP * random_flip + facenet.FIXED_STANDARDIZATION * use_fixed_image_standardization
+    control_value = facenet.RANDOM_ROTATE * random_rotate + facenet.RANDOM_CROP * random_crop + \
+                    facenet.RANDOM_FLIP * random_flip + facenet.FIXED_STANDARDIZATION * use_fixed_image_standardization
     control_array = np.ones_like(labels_array) * control_value
     sess.run(enqueue_op, {image_paths_placeholder: image_paths_array, labels_placeholder: labels_array,
                           control_placeholder: control_array})
@@ -348,7 +371,7 @@ def train(args, sess, epoch, image_list, label_list, index_dequeue_op, enqueue_o
                      batch_size_placeholder: args.batch_size}
         tensor_list = [loss, train_op, step, reg_losses, prelogits, cross_entropy_mean, learning_rate, prelogits_norm,
                        accuracy, prelogits_center_loss]
-        if batch_number % 100 == 0:
+        if batch_number % 100 == 0:  # 每训练100次汇总一次
             loss_, _, step_, reg_losses_, prelogits_, cross_entropy_mean_, lr_, prelogits_norm_, accuracy_, center_loss_, summary_str = sess.run(
                 tensor_list + [summary_op], feed_dict=feed_dict)
             summary_writer.add_summary(summary_str, global_step=step_)
@@ -389,7 +412,7 @@ def validate(args, sess, epoch, image_list, label_list, enqueue_op, image_paths_
              use_fixed_image_standardization):
     print('Running forward pass on validation set')
 
-    nrof_batches = len(label_list) // args.lfw_batch_size
+    nrof_batches = len(label_list) // args.lfw_batch_size  # 取商并向下取整
     nrof_images = nrof_batches * args.lfw_batch_size
 
     # Enqueue one epoch of image paths and labels
@@ -429,7 +452,8 @@ def validate(args, sess, epoch, image_list, label_list, enqueue_op, image_paths_
 def evaluate(sess, enqueue_op, image_paths_placeholder, labels_placeholder, phase_train_placeholder,
              batch_size_placeholder, control_placeholder,
              embeddings, labels, image_paths, actual_issame, batch_size, nrof_folds, log_dir, step, summary_writer,
-             stat, epoch, distance_metric, subtract_mean, use_flipped_images, use_fixed_image_standardization):
+             stat, epoch, distance_metric,
+             subtract_mean, use_flipped_images, use_fixed_image_standardization):
     start_time = time.time()
     # Run forward pass to calculate embeddings
     print('Runnning forward pass on LFW images')
@@ -439,7 +463,7 @@ def evaluate(sess, enqueue_op, image_paths_placeholder, labels_placeholder, phas
     nrof_flips = 2 if use_flipped_images else 1
     nrof_images = nrof_embeddings * nrof_flips
     labels_array = np.expand_dims(np.arange(0, nrof_images), 1)
-    image_paths_array = np.expand_dims(np.repeat(np.array(image_paths), nrof_flips), 1)
+    image_paths_array = np.expand_dims(np.repeat(np.array(image_paths), nrof_flips), 1)  # repeat复制数组元素
     control_array = np.zeros_like(labels_array, np.int32)
     if use_fixed_image_standardization:
         control_array += np.ones_like(labels_array) * facenet.FIXED_STANDARDIZATION
@@ -518,105 +542,152 @@ def save_variables_and_metagraph(sess, saver, summary_writer, model_dir, model_n
 def parse_arguments(argv):
     parser = argparse.ArgumentParser()
 
+    # 添加命令到sys.argv里
     parser.add_argument('--logs_base_dir', type=str,
                         help='Directory where to write event logs.', default='~/logs/facenet')
+
     parser.add_argument('--models_base_dir', type=str,
                         help='Directory where to write trained models and checkpoints.', default='~/models/facenet')
+
     parser.add_argument('--gpu_memory_fraction', type=float,
                         help='Upper bound on the amount of GPU memory that will be used by the process.', default=1.0)
+
     parser.add_argument('--pretrained_model', type=str,
                         help='Load a pretrained model before training starts.')
+
     parser.add_argument('--data_dir', type=str,
                         help='Path to the data directory containing aligned face patches.',
                         default='~/datasets/casia/casia_maxpy_mtcnnalign_182_160')
+
     parser.add_argument('--model_def', type=str,
                         help='Model definition. Points to a module containing the definition of the inference graph.',
                         default='models.inception_resnet_v1')
+
     parser.add_argument('--max_nrof_epochs', type=int,
                         help='Number of epochs to run.', default=500)
+
     parser.add_argument('--batch_size', type=int,
                         help='Number of images to process in a batch.', default=90)
+
     parser.add_argument('--image_size', type=int,
                         help='Image size (height, width) in pixels.', default=160)
+
     parser.add_argument('--epoch_size', type=int,
                         help='Number of batches per epoch.', default=1000)
+
     parser.add_argument('--embedding_size', type=int,
                         help='Dimensionality of the embedding.', default=128)
+
     parser.add_argument('--random_crop',
                         help='Performs random cropping of training images. If false, the center image_size pixels from the training images are used. ' +
                              'If the size of the images in the data directory is equal to image_size no cropping is performed',
                         action='store_true')
+
     parser.add_argument('--random_flip',
                         help='Performs random horizontal flipping of training images.', action='store_true')
+
     parser.add_argument('--random_rotate',
                         help='Performs random rotations of training images.', action='store_true')
+
     parser.add_argument('--use_fixed_image_standardization',
                         help='Performs fixed standardization of images.', action='store_true')
+
     parser.add_argument('--keep_probability', type=float,
                         help='Keep probability of dropout for the fully connected layer(s).', default=1.0)
+
     parser.add_argument('--weight_decay', type=float,
                         help='L2 weight regularization.', default=0.0)
+
     parser.add_argument('--center_loss_factor', type=float,
                         help='Center loss factor.', default=0.0)
+
     parser.add_argument('--center_loss_alfa', type=float,
                         help='Center update rate for center loss.', default=0.95)
+
     parser.add_argument('--prelogits_norm_loss_factor', type=float,
                         help='Loss based on the norm of the activations in the prelogits layer.', default=0.0)
+
     parser.add_argument('--prelogits_norm_p', type=float,
                         help='Norm to use for prelogits norm loss.', default=1.0)
+
     parser.add_argument('--prelogits_hist_max', type=float,
                         help='The max value for the prelogits histogram.', default=10.0)
+
     parser.add_argument('--optimizer', type=str, choices=['ADAGRAD', 'ADADELTA', 'ADAM', 'RMSPROP', 'MOM'],
                         help='The optimization algorithm to use', default='ADAGRAD')
+
     parser.add_argument('--learning_rate', type=float,
                         help='Initial learning rate. If set to a negative value a learning rate ' +
                              'schedule can be specified in the file "learning_rate_schedule.txt"', default=0.1)
+
     parser.add_argument('--learning_rate_decay_epochs', type=int,
                         help='Number of epochs between learning rate decay.', default=100)
+
     parser.add_argument('--learning_rate_decay_factor', type=float,
                         help='Learning rate decay factor.', default=1.0)
+
     parser.add_argument('--moving_average_decay', type=float,
                         help='Exponential decay for tracking of training parameters.', default=0.9999)
+
     parser.add_argument('--seed', type=int,
                         help='Random seed.', default=666)
+
     parser.add_argument('--nrof_preprocess_threads', type=int,
                         help='Number of preprocessing (data loading and augmentation) threads.', default=4)
+
     parser.add_argument('--log_histograms',
                         help='Enables logging of weight/bias histograms in tensorboard.', action='store_true')
+
     parser.add_argument('--learning_rate_schedule_file', type=str,
                         help='File containing the learning rate schedule that is used when learning_rate is set to to -1.',
                         default='data/learning_rate_schedule.txt')
+
     parser.add_argument('--filter_filename', type=str,
                         help='File containing image data used for dataset filtering', default='')
+
     parser.add_argument('--filter_percentile', type=float,
                         help='Keep only the percentile images closed to its class center', default=100.0)
+
     parser.add_argument('--filter_min_nrof_images_per_class', type=int,
                         help='Keep only the classes with this number of examples or more', default=0)
+
     parser.add_argument('--validate_every_n_epochs', type=int,
                         help='Number of epoch between validation', default=5)
+
     parser.add_argument('--validation_set_split_ratio', type=float,
                         help='The ratio of the total dataset to use for validation', default=0.0)
+
     parser.add_argument('--min_nrof_val_images_per_class', type=float,
                         help='Classes with fewer images will be removed from the validation set', default=0)
 
     # Parameters for validation on LFW
     parser.add_argument('--lfw_pairs', type=str,
                         help='The file containing the pairs to use for validation.', default='data/pairs.txt')
+
     parser.add_argument('--lfw_dir', type=str,
                         help='Path to the data directory containing aligned face patches.', default='')
+
     parser.add_argument('--lfw_batch_size', type=int,
                         help='Number of images to process in a batch in the LFW test set.', default=100)
+
     parser.add_argument('--lfw_nrof_folds', type=int,
                         help='Number of folds to use for cross validation. Mainly used for testing.', default=10)
+
     parser.add_argument('--lfw_distance_metric', type=int,
                         help='Type of distance metric to use. 0: Euclidian, 1:Cosine similarity distance.', default=0)
+
     parser.add_argument('--lfw_use_flipped_images',
                         help='Concatenates embeddings for the image and its horizontally flipped counterpart.',
                         action='store_true')
+
     parser.add_argument('--lfw_subtract_mean',
                         help='Subtract feature mean before calculating distance.', action='store_true')
-    return parser.parse_args(argv)
+
+    return parser.parse_args(argv)  # 返回命令列表
 
 
+"""
+sys.argv用于命令行，起初是一个仅含当前模块的列表，可通过add_argument添加命令
+"""
 if __name__ == '__main__':
     main(parse_arguments(sys.argv[1:]))
